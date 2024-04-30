@@ -7,7 +7,7 @@ use crate::error::Result;
 
 
 use crate::validation_checks::all_transaction_verification;
-use crate::block_mine::block::valid_block_header;
+use crate::block_mine::block::check_block_header;
 
 fn main() -> Result<()> {
     
@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     println!("TRANSACTION VERIFICATION: COMPLETED");
 
     // BLOCK MINING
-    valid_block_header()?;
+    check_block_header()?;
 
     Ok(())
 }
