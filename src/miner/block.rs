@@ -6,7 +6,7 @@ use num_traits::Num;
 
 use crate::{error::Result, miner::serialise::double_sha256};
 
-use super::{merkle_root::roots_generator, serialise::map_txid_to_tx};
+use super::{merkle::roots_generator, serialise::map_txid_to_tx};
 
 fn compact_target(target_hex: &str) -> u32 {
     let target_bytes = hex::decode(target_hex).expect("Invalid hex string");

@@ -1,3 +1,3 @@
 pub mod block;
-pub mod merkle_root;
+pub mod merkle;
 pub mod serialise;
