@@ -4,11 +4,11 @@ use std::{fs::File, io::Write};
 use num_bigint::BigUint;
 use num_traits::Num;
 
-use crate::{miner::serialise::double_sha256, error::Result};
+use crate::{error::Result, miner::serialise::double_sha256};
 
-use super::{merkle_root::generate_roots, serialise::create_txid_tx_map};
+use super::{merkle_root::roots_generator, serialise::map_txid_to_tx};
 
-fn target_to_compact(target_hex: &str) -> u32 {
+fn compact_target(target_hex: &str) -> u32 {
     let target_bytes = hex::decode(target_hex).expect("Invalid hex string");
     let mut target_bytes = target_bytes.as_slice();
 
@@ -54,15 +54,15 @@ fn target_to_compact(target_hex: &str) -> u32 {
     compact
 }
 
-pub fn valid_block_header() -> Result<()> {
+pub fn block_header_validator() -> Result<()> {
     let version_int: u32 = 4;
     let version = hex::encode(version_int.to_le_bytes());
 
     let prev_block_hash =
         "0000000000000000000000000000000000000000000000000000000000000000".to_string();
 
-    let map = create_txid_tx_map()?;
-    let (merkel_root, coinbase_tx, _, txids) = generate_roots(map.clone())?;
+    let map = map_txid_to_tx()?;
+    let (merkle_root, coinbase_tx, _, txids) = roots_generator(map.clone())?;
 
     let current_time = SystemTime::now();
     let since_epoch = current_time.duration_since(UNIX_EPOCH).unwrap();
@@ -71,7 +71,7 @@ pub fn valid_block_header() -> Result<()> {
 
     let target = "0000ffff00000000000000000000000000000000000000000000000000000000";
     let target_int = BigUint::from_str_radix(target, 16).expect("INVALID HEX IN THE BLOCK");
-    let bits = target_to_compact(target);
+    let bits = compact_target(target);
     let bits_hex = format!("{:08x}", bits);
     let mut bits_in_bytes = hex::decode(&bits_hex)?;
     bits_in_bytes.reverse();
@@ -79,7 +79,7 @@ pub fn valid_block_header() -> Result<()> {
 
     let mut nonce: u32 = 0;
 
-    let valid_block_header: String;
+    let block_header_validator: String;
 
     loop {
         let nonce_hex = hex::encode(nonce.to_le_bytes());
@@ -88,7 +88,7 @@ pub fn valid_block_header() -> Result<()> {
 
         block_header.push_str(&version);
         block_header.push_str(&prev_block_hash);
-        block_header.push_str(&merkel_root);
+        block_header.push_str(&merkle_root);
         block_header.push_str(&time_stamp);
         block_header.push_str(&bits_le);
         block_header.push_str(&nonce_hex);
@@ -103,7 +103,7 @@ pub fn valid_block_header() -> Result<()> {
 
         if block_hash_int <= target_int {
             println!("Valid nonce found: {}", nonce);
-            valid_block_header = block_header;
+            block_header_validator = block_header;
             break;
         }
 
@@ -114,7 +114,7 @@ pub fn valid_block_header() -> Result<()> {
 
     println!("Number of Transactions: {}", txids.len());
 
-    writeln!(block_file, "{}", valid_block_header)?;
+    writeln!(block_file, "{}", block_header_validator)?;
     writeln!(block_file, "{}", coinbase_tx)?;
 
     for txid in txids {

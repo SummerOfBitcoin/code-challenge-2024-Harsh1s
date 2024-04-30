@@ -2,24 +2,24 @@ use std::vec;
 
 use hex;
 
+use crate::validator::checkmultisig_op;
+use crate::validator::checksig_op;
 use crate::validator::hash160;
-use crate::validator::op_checkmultisig;
-use crate::validator::op_checksig;
 
 use crate::{error::Result, transaction::Transaction};
 
 use super::single_sha256;
 
-pub fn input_verification_p2wsh(tx_input_index: usize, tx: Transaction) -> Result<bool> {
+pub fn p2wsh_input_verification(tx_input_index: usize, tx: Transaction) -> Result<bool> {
     let witness = match tx.vin[tx_input_index].witness.clone() {
         Some(value) => value,
         None => Vec::new(),
     };
 
-    Ok(script_execution_p2wsh(witness, tx, tx_input_index)?)
+    Ok(p2wsh_script_execution(witness, tx, tx_input_index)?)
 }
 
-fn script_execution_p2wsh(
+fn p2wsh_script_execution(
     witness: Vec<String>,
     tx: Transaction,
     tx_input_index: usize,
@@ -74,7 +74,7 @@ fn script_execution_p2wsh(
 
             174 => {
                 let result_multisig =
-                    op_checkmultisig(&mut stack, tx.clone(), tx_input_index, input_type)?;
+                    checkmultisig_op(&mut stack, tx.clone(), tx_input_index, input_type)?;
 
                 if result_multisig == true {
                     script_result = true;
@@ -86,7 +86,7 @@ fn script_execution_p2wsh(
 
             173 => {
                 let result_singlesig =
-                    op_checksig(&mut stack, tx.clone(), tx_input_index, input_type)?;
+                    checksig_op(&mut stack, tx.clone(), tx_input_index, input_type)?;
 
                 if result_singlesig == true {
                     stack.push(vec![1u8]);
@@ -108,7 +108,7 @@ fn script_execution_p2wsh(
 
                 if sig_length <= 75 && sig_length >= 70 {
                     script_result =
-                        op_checksig(&mut stack, tx.clone(), tx_input_index, input_type)?;
+                        checksig_op(&mut stack, tx.clone(), tx_input_index, input_type)?;
 
                     if script_result == true {
                         stack.push(vec![1u8]);
@@ -243,7 +243,7 @@ fn script_execution_p2wsh(
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
-                                let result_singlesig = op_checksig(
+                                let result_singlesig = checksig_op(
                                     &mut stack,
                                     tx.clone(),
                                     tx_input_index,
@@ -273,7 +273,7 @@ fn script_execution_p2wsh(
                                 let sig_length = stack[stack.len() - 1].len();
 
                                 if sig_length <= 75 && sig_length >= 70 {
-                                    script_result = op_checksig(
+                                    script_result = checksig_op(
                                         &mut stack,
                                         tx.clone(),
                                         tx_input_index,
@@ -417,7 +417,7 @@ fn script_execution_p2wsh(
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
-                                let result_singlesig = op_checksig(
+                                let result_singlesig = checksig_op(
                                     &mut stack,
                                     tx.clone(),
                                     tx_input_index,
@@ -447,7 +447,7 @@ fn script_execution_p2wsh(
                                 let sig_length = stack[stack.len() - 1].len();
 
                                 if sig_length <= 75 && sig_length >= 70 {
-                                    script_result = op_checksig(
+                                    script_result = checksig_op(
                                         &mut stack,
                                         tx.clone(),
                                         tx_input_index,

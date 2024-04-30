@@ -12,8 +12,8 @@ use walkdir::WalkDir;
 use crate::{error::Result, transaction::Transaction};
 
 use self::{
-    p2pkh::input_verification_p2pkh, p2wpkh::input_verification_p2wpkh,
-    p2wsh::input_verification_p2wsh,
+    p2pkh::p2pkh_input_verification, p2wpkh::p2wpkh_input_verification,
+    p2wsh::p2wsh_input_verification,
 };
 
 pub mod p2pkh;
@@ -32,7 +32,7 @@ pub fn single_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
 }
 
-pub fn op_checksig(
+pub fn checksig_op(
     stack: &mut Vec<Vec<u8>>,
     tx: Transaction,
     tx_input_index: usize,
@@ -69,7 +69,7 @@ pub fn op_checksig(
     Ok(result)
 }
 
-pub fn op_checkmultisig(
+pub fn checkmultisig_op(
     stack: &mut Vec<Vec<u8>>,
     tx: Transaction,
     tx_input_index: usize,
@@ -440,7 +440,7 @@ pub fn trimmed_tx(
     Ok(trimmed_tx)
 }
 
-pub fn verify_tx(tx: Transaction) -> Result<bool> {
+pub fn tx_verifier(tx: Transaction) -> Result<bool> {
     let _p2pkh = "p2pkh".to_string();
     let _p2sh = "p2sh".to_string();
     let _p2wpkh = "v0_p2wpkh".to_string();
@@ -462,7 +462,7 @@ pub fn verify_tx(tx: Transaction) -> Result<bool> {
 
     if tx_type == _p2pkh {
         for input_index in 0..tx.vin.len() {
-            match input_verification_p2pkh(tx.clone(), input_index) {
+            match p2pkh_input_verification(tx.clone(), input_index) {
                 Ok(false) => {
                     return Ok(false);
                 }
@@ -478,7 +478,7 @@ pub fn verify_tx(tx: Transaction) -> Result<bool> {
 
     if tx_type == _p2wpkh {
         for input_index in 0..tx.vin.len() {
-            match input_verification_p2wpkh(input_index, tx.clone()) {
+            match p2wpkh_input_verification(input_index, tx.clone()) {
                 Ok(false) => {
                     return Ok(false);
                 }
@@ -495,7 +495,7 @@ pub fn verify_tx(tx: Transaction) -> Result<bool> {
     }
     if tx_type == _p2wsh {
         for input_index in 0..tx.vin.len() {
-            match input_verification_p2wsh(input_index, tx.clone()) {
+            match p2wsh_input_verification(input_index, tx.clone()) {
                 Ok(false) => {
                     return Ok(false);
                 }
@@ -552,7 +552,7 @@ fn gas_fees_check(tx: &Transaction) -> bool {
     }
 }
 
-pub fn all_transaction_verification() -> Result<()> {
+pub fn verify_all_tx() -> Result<()> {
     let mempool_dir = "./mempool";
 
     let mut spends: HashMap<String, String> = HashMap::new();
@@ -578,7 +578,7 @@ pub fn all_transaction_verification() -> Result<()> {
                             }
                         }
 
-                        let result = verify_tx(transaction)?;
+                        let result = tx_verifier(transaction)?;
                         if result == true {
                             if let Some(filename) = path.file_name() {
                                 let valid_mempool_dir = Path::new("./valid-mempool");

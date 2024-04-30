@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 use crate::error::Result;
 use crate::transaction::Transaction;
 
-pub fn input_verification_p2pkh(tx: Transaction, tx_input_index: usize) -> Result<bool> {
+pub fn p2pkh_input_verification(tx: Transaction, tx_input_index: usize) -> Result<bool> {
     let scriptsig_asm = match tx.vin[tx_input_index].scriptsig_asm.clone() {
         Some(value) => value,
         None => {
@@ -16,7 +16,7 @@ pub fn input_verification_p2pkh(tx: Transaction, tx_input_index: usize) -> Resul
 
     let scriptpubkey_asm = tx.vin[tx_input_index].prevout.scriptpubkey_asm.clone();
 
-    Ok(script_execution(
+    Ok(execute_script(
         scriptpubkey_asm,
         scriptsig_asm,
         tx,
@@ -24,7 +24,7 @@ pub fn input_verification_p2pkh(tx: Transaction, tx_input_index: usize) -> Resul
     ))
 }
 
-fn script_execution(
+fn execute_script(
     scriptpubkey_asm: String,
     scriptsig_asm: String,
     tx: Transaction,
@@ -70,7 +70,7 @@ fn script_execution(
                         return false;
                     }
                 } else if *op_code == "OP_CHECKSIG" {
-                    let result = op_checksig(&tx, tx_input_index);
+                    let result = checksig_op(&tx, tx_input_index);
 
                     if result == true {
                         continue;
@@ -92,7 +92,7 @@ fn double_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(&Sha256::digest(data)).to_vec()
 }
 
-fn op_checksig(tx: &Transaction, tx_input_index: usize) -> bool {
+fn checksig_op(tx: &Transaction, tx_input_index: usize) -> bool {
     let mut trimmed_tx = Vec::new();
 
     trimmed_tx.extend(&tx.version.to_le_bytes());

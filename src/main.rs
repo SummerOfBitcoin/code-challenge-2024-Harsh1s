@@ -1,19 +1,19 @@
-mod miner;
 mod error;
+mod miner;
 mod transaction;
 mod validator;
 
 use crate::error::Result;
 
-use crate::miner::block::valid_block_header;
-use crate::validator::all_transaction_verification;
+use crate::miner::block::block_header_validator;
+use crate::validator::verify_all_tx;
 
 fn main() -> Result<()> {
-    all_transaction_verification()?;
+    verify_all_tx()?;
 
     println!("Transactions Verified!");
 
-    valid_block_header()?;
+    block_header_validator()?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use crate::transaction::Transaction;
 
 use super::serialise::double_sha256;
 
-pub fn generate_roots(
+pub fn roots_generator(
     map: Vec<(String, Transaction, String, usize, u64)>,
 ) -> Result<(String, String, String, Vec<String>)> {
     let tx_weight_limit = 3993000;
@@ -26,9 +26,9 @@ pub fn generate_roots(
         wtxids.push(wtxid);
     }
 
-    let witness_root_hash = merkel_root(wtxids)?;
+    let witness_root_hash = merkle_root(wtxids)?;
 
-    let (coinbase_tx, txid_coinbase_tx) = create_coinbase(witness_root_hash, block_subsidy)?;
+    let (coinbase_tx, txid_coinbase_tx) = coinbase_creator(witness_root_hash, block_subsidy)?;
 
     let mut coinbase_txid_bytes = double_sha256(&hex::decode(&txid_coinbase_tx)?);
     coinbase_txid_bytes.reverse();
@@ -37,12 +37,12 @@ pub fn generate_roots(
 
     txids.insert(0, coinbase_txid.clone());
 
-    let merkel_root = merkel_root(txids.clone())?;
+    let merkle_root = merkle_root(txids.clone())?;
 
-    Ok((merkel_root, coinbase_tx, coinbase_txid, txids))
+    Ok((merkle_root, coinbase_tx, coinbase_txid, txids))
 }
 
-fn merkel_root(txids: Vec<String>) -> Result<String> {
+fn merkle_root(txids: Vec<String>) -> Result<String> {
     let mut txids_natural: Vec<String> = Vec::new();
 
     for txid in txids.iter() {
@@ -75,7 +75,7 @@ fn merkel_root(txids: Vec<String>) -> Result<String> {
     Ok(txids_natural[0].clone())
 }
 
-pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<(String, String)> {
+pub fn coinbase_creator(witness_root_hash: String, block_subsidy: u64) -> Result<(String, String)> {
     let mut coinbase_tx = String::new();
     let mut txid_coinbase_tx = String::new();
 

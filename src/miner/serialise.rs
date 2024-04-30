@@ -8,7 +8,7 @@ pub fn double_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(&Sha256::digest(data)).to_vec()
 }
 
-pub fn create_txid_tx_map() -> Result<Vec<(String, Transaction, String, usize, u64)>> {
+pub fn map_txid_to_tx() -> Result<Vec<(String, Transaction, String, usize, u64)>> {
     let v_mempool_dir = "./valid-mempool";
     let mut map: Vec<(String, Transaction, String, usize, u64)> = Vec::new();
 
