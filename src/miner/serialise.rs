@@ -61,17 +61,11 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
         tx_type = "SEGWIT";
     }
 
-    let mut fees = 0;
+    let fees = tx.vin.iter().map(|input| input.prevout.value).sum::<u64>()
+        - tx.vout.iter().map(|output| output.value).sum::<u64>();
+
     let mut non_witness_bytes = 0;
     let mut witness_bytes = 0;
-
-    for input in tx.vin.iter() {
-        fees += input.prevout.value;
-    }
-
-    for output in tx.vout.iter() {
-        fees -= output.value;
-    }
 
     let mut raw_tx: Vec<u8> = Vec::new();
     let mut raw_wtx: Vec<u8> = Vec::new();

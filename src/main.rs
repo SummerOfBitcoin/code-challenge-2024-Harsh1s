@@ -10,10 +10,6 @@ use crate::validator::verify_all_tx;
 
 fn main() -> Result<()> {
     verify_all_tx()?;
-
-    println!("Transactions Verified!");
-
     block_header_validator()?;
-
     Ok(())
 }

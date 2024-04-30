@@ -31,22 +31,24 @@ fn p2wsh_script_execution(
     let input_type = "P2WSH";
     let mut script_result = false;
 
-    let mut stack: Vec<Vec<u8>> = Vec::new();
-
-    for index in 0..witness.len() - 1 {
-        stack.push(hex::decode(&witness[index])?);
-    }
+    let mut stack: Vec<Vec<u8>> = witness
+        .iter()
+        .take(witness.len() - 1)
+        .map(|w| hex::decode(w).unwrap())
+        .collect();
 
     let witness_script_bytes = hex::decode(&witness.last().cloned().expect("SCRIPT MISSING"))?;
 
-    let scriptpubkey_asm = tx.vin[tx_input_index].prevout.scriptpubkey_asm.clone();
-    let scriptpubkey_asm_slices: Vec<&str> = scriptpubkey_asm.split_whitespace().collect();
-    let witness_program = scriptpubkey_asm_slices
+    let witness_program = tx.vin[tx_input_index]
+        .prevout
+        .scriptpubkey_asm
+        .split_whitespace()
+        .collect::<Vec<&str>>()
         .last()
         .cloned()
         .unwrap_or("witness program: missing");
-    let witness_program_bytes = hex::decode(&witness_program)?;
 
+    let witness_program_bytes = hex::decode(&witness_program)?;
     let witnness_script_hash = single_sha256(&witness_script_bytes);
 
     if witnness_script_hash != witness_program_bytes {

@@ -7,18 +7,14 @@ use crate::error::Result;
 use crate::transaction::Transaction;
 
 pub fn p2pkh_input_verification(tx: Transaction, tx_input_index: usize) -> Result<bool> {
-    let scriptsig_asm = match tx.vin[tx_input_index].scriptsig_asm.clone() {
-        Some(value) => value,
-        None => {
-            return Ok(false);
-        }
-    };
-
-    let scriptpubkey_asm = tx.vin[tx_input_index].prevout.scriptpubkey_asm.clone();
-
     Ok(execute_script(
-        scriptpubkey_asm,
-        scriptsig_asm,
+        tx.vin[tx_input_index].prevout.scriptpubkey_asm.clone(),
+        match tx.vin[tx_input_index].scriptsig_asm.clone() {
+            Some(value) => value,
+            None => {
+                return Ok(false);
+            }
+        },
         tx,
         tx_input_index,
     ))
@@ -32,11 +28,10 @@ fn execute_script(
 ) -> bool {
     let sigscript_asm_slices: Vec<&str> = scriptsig_asm.split_whitespace().collect();
 
-    let signature = *sigscript_asm_slices.get(1).expect("Signature missing");
-    let pubkey = *sigscript_asm_slices.get(3).expect("Public key missing");
-
-    let sig = hex::decode(signature).expect("Failed to decode signature");
-    let pubkey = hex::decode(pubkey).expect("Failed to decode public key");
+    let sig = hex::decode(*sigscript_asm_slices.get(1).expect("Signature missing"))
+        .expect("Failed to decode signature");
+    let pubkey = hex::decode(*sigscript_asm_slices.get(3).expect("Public key missing"))
+        .expect("Failed to decode public key");
 
     let mut stack: Vec<Vec<u8>> = Vec::new();
 
@@ -170,10 +165,17 @@ fn checksig_op(tx: &Transaction, tx_input_index: usize) -> bool {
 }
 
 fn extract_sighash_type(scriptsig_asm: String) -> Option<u32> {
-    let scriptsig_slices: Vec<&str> = scriptsig_asm.split_whitespace().collect();
-    let signature = scriptsig_slices[1];
-    let sig_bytes = hex::decode(signature).ok()?;
-    let sighash_type = sig_bytes.last().copied().expect("NOT FOUND") as u32;
-
-    Some(sighash_type)
+    Some(
+        (hex::decode(
+            scriptsig_asm
+                .split_whitespace()
+                .collect::<Vec<&str>>()
+                .get(1)
+                .unwrap(),
+        )
+        .ok()?)
+        .last()
+        .copied()
+        .expect("NOT FOUND") as u32,
+    )
 }

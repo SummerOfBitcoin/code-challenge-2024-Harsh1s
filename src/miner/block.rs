@@ -45,13 +45,11 @@ fn compact_target(target_hex: &str) -> u32 {
         (size, significant)
     };
 
-    let compact = if significant & 0x00800000 != 0 {
+    if significant & 0x00800000 != 0 {
         (significant >> 8) | ((exp + 1) << 24)
     } else {
         significant | (exp << 24)
-    };
-
-    compact
+    }
 }
 
 pub fn block_header_validator() -> Result<()> {
@@ -71,9 +69,8 @@ pub fn block_header_validator() -> Result<()> {
 
     let target = "0000ffff00000000000000000000000000000000000000000000000000000000";
     let target_int = BigUint::from_str_radix(target, 16).expect("INVALID HEX IN THE BLOCK");
-    let bits = compact_target(target);
-    let bits_hex = format!("{:08x}", bits);
-    let mut bits_in_bytes = hex::decode(&bits_hex)?;
+
+    let mut bits_in_bytes = hex::decode(format!("{:08x}", compact_target(target)))?;
     bits_in_bytes.reverse();
     let bits_le = hex::encode(bits_in_bytes);
 

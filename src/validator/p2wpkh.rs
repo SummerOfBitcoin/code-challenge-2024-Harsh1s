@@ -5,12 +5,14 @@ use crate::validator::checksig_op;
 use crate::{error::Result, transaction::Transaction};
 
 pub fn p2wpkh_input_verification(tx_input_index: usize, tx: Transaction) -> Result<bool> {
-    let witness = match tx.vin[tx_input_index].witness.clone() {
-        Some(value) => value,
-        None => Vec::new(),
-    };
-
-    Ok(p2wpkh_script_execution(witness, tx, tx_input_index)?)
+    Ok(p2wpkh_script_execution(
+        match tx.vin[tx_input_index].witness.clone() {
+            Some(value) => value,
+            None => Vec::new(),
+        },
+        tx,
+        tx_input_index,
+    )?)
 }
 
 fn p2wpkh_script_execution(
@@ -28,12 +30,16 @@ fn p2wpkh_script_execution(
 
     let input_type = "P2WPKH";
 
-    let mut stack = Vec::new();
+    let mut stack = witness
+        .iter()
+        .take(2)
+        .map(|w| hex::decode(w).unwrap())
+        .collect::<Vec<Vec<u8>>>();
 
-    stack.push(hex::decode(&witness[0])?);
-    stack.push(hex::decode(&witness[1])?);
-
-    let script_result = checksig_op(&mut stack, tx.clone(), tx_input_index, input_type)?;
-
-    Ok(script_result)
+    Ok(checksig_op(
+        &mut stack,
+        tx.clone(),
+        tx_input_index,
+        input_type,
+    )?)
 }
