@@ -112,7 +112,7 @@ pub fn valid_block_header() -> Result<()> {
 
     let mut block_file = File::create("./output.txt")?;
 
-    println!("{}", txids.len());
+    println!("Number of Transactions: {}", txids.len());
 
     writeln!(block_file, "{}", valid_block_header)?;
     writeln!(block_file, "{}", coinbase_tx)?;

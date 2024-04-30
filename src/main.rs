@@ -11,7 +11,7 @@ use crate::validation_checks::all_transaction_verification;
 fn main() -> Result<()> {
     all_transaction_verification()?;
 
-    println!("TRANSACTION VERIFICATION: COMPLETED");
+    println!("Transactions Verified!");
 
     valid_block_header()?;
 
