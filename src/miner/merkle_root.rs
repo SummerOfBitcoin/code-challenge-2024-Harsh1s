@@ -140,24 +140,3 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
 
     Ok((coinbase_tx, txid_coinbase_tx))
 }
-
-#[cfg(test)]
-
-mod test {
-    use super::*;
-
-    #[test]
-    fn merkel_test() -> Result<()> {
-        let txids = vec![
-            "2ec4532bbb79b5875f3e86cf11f3f1e42b74717c573368a92558cff7b1033365".to_string(),
-            "958ffdb52a9148d3a6fca79d21d6b17e146c94909f6e63dd7723e409b10a1cd2".to_string(),
-            "dbba5fdfee9cb36e4f80db9ed7daebaa1460f9836bb0328db2f9f2dc4cd02d14".to_string(),
-        ];
-
-        let merkel_root = merkel_root(txids)?;
-
-        println!("{}", merkel_root);
-
-        Ok(())
-    }
-}

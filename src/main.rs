@@ -1,12 +1,12 @@
-mod block_mine;
+mod miner;
 mod error;
 mod transaction;
-mod validation_checks;
+mod validator;
 
 use crate::error::Result;
 
-use crate::block_mine::block::valid_block_header;
-use crate::validation_checks::all_transaction_verification;
+use crate::miner::block::valid_block_header;
+use crate::validator::all_transaction_verification;
 
 fn main() -> Result<()> {
     all_transaction_verification()?;

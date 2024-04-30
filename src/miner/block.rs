@@ -4,7 +4,7 @@ use std::{fs::File, io::Write};
 use num_bigint::BigUint;
 use num_traits::Num;
 
-use crate::{block_mine::serialise_tx::double_sha256, error::Result};
+use crate::{miner::serialise_tx::double_sha256, error::Result};
 
 use super::{merkle_root::generate_roots, serialise_tx::create_txid_tx_map};
 
