@@ -1,20 +1,23 @@
-mod mine;
+mod block_mine;
 mod error;
 mod transaction;
-mod validate;
+mod validation_checks;
 
 use crate::error::Result;
-use crate::mine::mine_block;
-use crate::validate::validate_transactions;
+
+
+use crate::validation_checks::all_transaction_verification;
+use crate::block_mine::block::valid_block_header;
 
 fn main() -> Result<()> {
-    // Stage 1: Transaction Validation
-    validate_transactions()?;
-    println!("Transaction Verification: Completed");
+    
+    // TRANSACTION VERIFICATION FUNCTION
+    all_transaction_verification()?;
 
-    // Stage 2: Block Mining
-    mine_block()?;
-    println!("Block Mined: Success");
+    println!("TRANSACTION VERIFICATION: COMPLETED");
+
+    // BLOCK MINING
+    valid_block_header()?;
 
     Ok(())
 }
