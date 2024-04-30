@@ -8,26 +8,26 @@ use crate::{block_mine::serialise_tx::double_sha256, error::Result};
 
 use super::{merkle_root::generate_roots, serialise_tx::create_txid_tx_map};
 
-// COVERTS THE HEX REPRESENTATION TO COMPACT REPRESENTATION
-fn target_to_compact(target_hex: &str) -> u32 {
-    // Parse the target from a hex string to a big number
-    let target_bytes = hex::decode(target_hex).expect("Invalid hex string");
-    let mut target_bytes = target_bytes.as_slice();
+// Function to compact the target
+fn compact_target(target_hex: &str) -> u32 {
+    // Decode the target from hex
+    let decoded_target = hex::decode(target_hex).expect("Invalid hex string");
+    let mut target_slice = decoded_target.as_slice();
 
-    // Trim leading zeros
-    while let Some(&0) = target_bytes.first() {
-        target_bytes = &target_bytes[1..];
+    // Remove leading zeros
+    while let Some(&0) = target_slice.first() {
+        target_slice = &target_slice[1..];
     }
 
-    // Prepare the compact format
-    let size = target_bytes.len() as u32;
+    // Calculate the size and significant part of the target
+    let size = target_slice.len() as u32;
     let (exp, significant) = if size <= 3 {
         (
             size,
             u32::from_be_bytes(
                 [0; 1]
                     .iter()
-                    .chain(target_bytes.iter().chain(std::iter::repeat(&0)))
+                    .chain(target_slice.iter().chain(std::iter::repeat(&0)))
                     .take(4)
                     .cloned()
                     .collect::<Vec<u8>>()
@@ -36,11 +36,11 @@ fn target_to_compact(target_hex: &str) -> u32 {
             ),
         )
     } else {
-        let significant_bytes = &target_bytes[0..3]; // Take the first three significant bytes
+        let significant_slice = &target_slice[0..3];
         let significant = u32::from_be_bytes(
             [0; 1]
                 .iter()
-                .chain(significant_bytes.iter())
+                .chain(significant_slice.iter())
                 .cloned()
                 .collect::<Vec<u8>>()
                 .try_into()
@@ -49,7 +49,7 @@ fn target_to_compact(target_hex: &str) -> u32 {
         (size, significant)
     };
 
-    // Adjust for Bitcoin's compact format specification
+    // Calculate the compact target
     let compact = if significant & 0x00800000 != 0 {
         (significant >> 8) | ((exp + 1) << 24)
     } else {
@@ -59,82 +59,89 @@ fn target_to_compact(target_hex: &str) -> u32 {
     compact
 }
 
-// CREATE A VAALID BLOCK HEADER USING PROOF OF WORK
-pub fn valid_block_header() -> Result<()> {
-    // VERSION
-    let version_int: u32 = 4;
-    let version = hex::encode(version_int.to_le_bytes());
+// Function to check the block header
+pub fn check_block_header() -> Result<()> {
+    // Define the version number and encode it to hex
+    let version_num: u32 = 4;
+    let version = hex::encode(version_num.to_le_bytes());
 
-    // PREVIOUS BLOCK HASH
-    let prev_block_hash =
+    // Define the previous block hash
+    let previous_block_hash =
         "0000000000000000000000000000000000000000000000000000000000000000".to_string();
 
+    // Create a map of transaction IDs to transactions
     let map = create_txid_tx_map()?;
+    // Generate the merkle root, coinbase transaction, and list of transaction IDs
     let (merkel_root, coinbase_tx, _, txids) = generate_roots(map.clone())?;
 
-    // TIME STAMP
+    // Get the current time and convert it to a timestamp
     let current_time = SystemTime::now();
     let since_epoch = current_time.duration_since(UNIX_EPOCH).unwrap();
-    let time_stamp_int = since_epoch.as_secs() as u32;
-    let time_stamp = hex::encode(time_stamp_int.to_le_bytes());
+    let time_stamp_num = since_epoch.as_secs() as u32;
+    let time_stamp = hex::encode(time_stamp_num.to_le_bytes());
 
-    // TARGET BITS
+    // Define the target and convert it to a number
     let target = "0000ffff00000000000000000000000000000000000000000000000000000000";
-    let target_int = BigUint::from_str_radix(target, 16).expect("INVALID HEX IN THE BLOCK");
-    let bits = target_to_compact(target);
+    let target_num = BigUint::from_str_radix(target, 16).expect("INVALID HEX IN THE BLOCK");
+    // Compact the target
+    let bits = compact_target(target);
     let bits_hex = format!("{:08x}", bits);
     let mut bits_in_bytes = hex::decode(&bits_hex)?;
     bits_in_bytes.reverse();
     let bits_le = hex::encode(bits_in_bytes);
 
-    // NONCE
+    // Initialize the nonce
     let mut nonce: u32 = 0;
 
-    let valid_block_header: String;
+    let valid_header: String;
 
-    // POW LOGIC
+    // Loop until a valid nonce is found
     loop {
+        // Encode the nonce to hex
         let nonce_hex = hex::encode(nonce.to_le_bytes());
 
+        // Initialize the block header
         let mut block_header: String = String::new();
 
+        // Add the version, previous block hash, merkle root, timestamp, bits, and nonce to the block header
         block_header.push_str(&version);
-        block_header.push_str(&prev_block_hash);
+        block_header.push_str(&previous_block_hash);
         block_header.push_str(&merkel_root);
         block_header.push_str(&time_stamp);
         block_header.push_str(&bits_le);
         block_header.push_str(&nonce_hex);
 
+        // Calculate the block hash
         let mut block_hash_bytes = double_sha256(&hex::decode(&block_header)?);
         block_hash_bytes.reverse();
-
         let block_hash = hex::encode(block_hash_bytes);
 
-        let block_hash_int =
+        // Convert the block hash to a number
+        let block_hash_num =
             BigUint::from_str_radix(&block_hash, 16).expect("Invalid hex in block hash");
 
-        if block_hash_int <= target_int {
+        // If the block hash is less than or equal to the target, a valid nonce has been found
+        if block_hash_num <= target_num {
             println!("Valid nonce found: {}", nonce);
-            valid_block_header = block_header;
+            valid_header = block_header;
             break;
         }
 
+        // Increment the nonce
         nonce += 1;
     }
 
-    // BLOCK HEADER
-    // COINBASE TX
-    // COINBASE TXID
-    // REGULAR TXID
-
-    // PUT THE BLOCK HEADER, COINBASE TX, AND TXIDS IN THE OUTPUT.TXT FILE
+    // Create a file to write the block to
     let mut block_file = File::create("./output.txt")?;
 
+    // Print the number of transactions
     println!("{}", txids.len());
 
-    writeln!(block_file, "{}", valid_block_header)?;
+    // Write the valid header and coinbase transaction to the file
+    writeln!(block_file, "{}", valid_header)?;
     writeln!(block_file, "{}", coinbase_tx)?;
 
+    // Write each transaction ID to the file
     for txid in txids {
         writeln!(block_file, "{}", txid)?;
     }
