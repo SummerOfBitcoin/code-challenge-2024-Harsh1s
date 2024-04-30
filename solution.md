@@ -31,7 +31,7 @@
 
 - **Mempool and Block Construction**
 
-  - **Transaction Selection:** The code has a mechanism for choosing transactions from the mempool and putting them inside valid-mempool folder after validating them.
+  - **Transaction Selection:** The code has a mechanism for choosing transactions from the mempool and putting them inside validated folder after validating them.
   - **Merkle Root:** Implementation of a recursive Merkle tree building algorithm for transaction hash aggregation.
 
 - **Proof-of-Work**
