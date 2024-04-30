@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use crate::transaction::Transaction;
 
-use super::serialise_tx::double_sha256;
+use super::serialise::double_sha256;
 
 pub fn generate_roots(
     map: Vec<(String, Transaction, String, usize, u64)>,

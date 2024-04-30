@@ -4,9 +4,9 @@ use std::{fs::File, io::Write};
 use num_bigint::BigUint;
 use num_traits::Num;
 
-use crate::{miner::serialise_tx::double_sha256, error::Result};
+use crate::{miner::serialise::double_sha256, error::Result};
 
-use super::{merkle_root::generate_roots, serialise_tx::create_txid_tx_map};
+use super::{merkle_root::generate_roots, serialise::create_txid_tx_map};
 
 fn target_to_compact(target_hex: &str) -> u32 {
     let target_bytes = hex::decode(target_hex).expect("Invalid hex string");
