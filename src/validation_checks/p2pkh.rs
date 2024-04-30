@@ -1,4 +1,3 @@
-// OPERATE ON THE P2PKH TRANSACTIONS 
 use hex;
 use ripemd::Ripemd160;
 use secp256k1::{ecdsa::Signature, Message, PublicKey, Secp256k1};
@@ -8,8 +7,6 @@ use crate::error::Result;
 use crate::transaction::Transaction;
 
 pub fn input_verification_p2pkh(tx: Transaction, tx_input_index: usize) -> Result<bool> {
-    // EXTRACT THE SCRIPT PUB KEY ASM AND SCRIPT-SIG ASM FROM THE INPUT
-
     let scriptsig_asm = match tx.vin[tx_input_index].scriptsig_asm.clone() {
         Some(value) => value,
         None => {
@@ -27,7 +24,6 @@ pub fn input_verification_p2pkh(tx: Transaction, tx_input_index: usize) -> Resul
     ))
 }
 
-// EXECUTE THE SCRIPT SIG ASM
 fn script_execution(
     scriptpubkey_asm: String,
     scriptsig_asm: String,
@@ -44,14 +40,11 @@ fn script_execution(
 
     let mut stack: Vec<Vec<u8>> = Vec::new();
 
-    // PUSH THE SIGNATURE AND PUBLIC IN THE STACK
-
     stack.push(sig);
     stack.push(pubkey);
 
     let op_codes: Vec<&str> = scriptpubkey_asm.split_whitespace().collect();
 
-    // LOGIC IMPLEMENTATION OF THE OPCODES THAT COME IN THE PATH 
     for op_code in op_codes.iter() {
         match *op_code {
             "OP_DUP" => {
@@ -64,11 +57,9 @@ fn script_execution(
                 stack.push(hash);
             }
             "OP_PUSHBYTES_20" => {
-                // The next iteration will have the actual bytes to push
                 continue;
             }
             _ => {
-                // Assuming the curernt op_code is the bytes pushed by OP_PUSHBYTES_20
                 if op_code.len() == 40 {
                     stack.push(hex::decode(op_code).unwrap());
                 } else if *op_code == "OP_EQUALVERIFY" {
@@ -101,7 +92,6 @@ fn double_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(&Sha256::digest(data)).to_vec()
 }
 
-// OPCHECK_SIG OPERATION AND TRIMMED TX CREATION FOR P2PKH 
 fn op_checksig(tx: &Transaction, tx_input_index: usize) -> bool {
     let mut trimmed_tx = Vec::new();
 
@@ -151,8 +141,6 @@ fn op_checksig(tx: &Transaction, tx_input_index: usize) -> bool {
         trimmed_tx.extend(&sighash_type.to_le_bytes());
     }
 
-    // THE TRIMMED TRANSACTION IS READY
-
     let scriptsig_asm = tx.vin[tx_input_index]
         .scriptsig_asm
         .clone()
@@ -181,7 +169,6 @@ fn op_checksig(tx: &Transaction, tx_input_index: usize) -> bool {
     }
 }
 
-// EXTRACTS THE SIGHASH TYPE FROM THE LAST OF THE SIGNATURE
 fn extract_sighash_type(scriptsig_asm: String) -> Option<u32> {
     let scriptsig_slices: Vec<&str> = scriptsig_asm.split_whitespace().collect();
     let signature = scriptsig_slices[1];
@@ -191,7 +178,6 @@ fn extract_sighash_type(scriptsig_asm: String) -> Option<u32> {
     Some(sighash_type)
 }
 
-// TO TEST MY CODE DURING DEVELOPMENT
 #[cfg(test)]
 mod test {
     use std::fs;
@@ -209,49 +195,45 @@ mod test {
             let path = entry.path();
             if path.is_file() {
                 match fs::read_to_string(path) {
-                    Ok(contents) => {
-                        match serde_json::from_str::<Transaction>(&contents) {
-                            Ok(transaction) => {
-                                let all_p2sh = transaction.clone().vin.iter().all(|input| {
-                                    input.prevout.scriptpubkey_type == "p2pkh".to_string()
-                                });
+                    Ok(contents) => match serde_json::from_str::<Transaction>(&contents) {
+                        Ok(transaction) => {
+                            let all_p2sh = transaction.clone().vin.iter().all(|input| {
+                                input.prevout.scriptpubkey_type == "p2pkh".to_string()
+                            });
 
-                                let mut tx_result = true;
+                            let mut tx_result = true;
 
-                                if all_p2sh {
-                                    for input_index in 0..transaction.vin.len() {
-                                        let scriptsig_asm = transaction.clone().vin[input_index]
-                                            .scriptsig_asm
-                                            .clone()
-                                            .expect("ASM: MISSING");
+                            if all_p2sh {
+                                for input_index in 0..transaction.vin.len() {
+                                    let scriptsig_asm = transaction.clone().vin[input_index]
+                                        .scriptsig_asm
+                                        .clone()
+                                        .expect("ASM: MISSING");
 
-                                        let tx = transaction.clone();
-                                        let result = script_execution(
-                                            tx.vin[input_index].prevout.scriptpubkey_asm.clone(),
-                                            scriptsig_asm,
-                                            tx,
-                                            input_index,
-                                        );
-                                        if result == false {
-                                            tx_result = false;
-                                            break;
-                                        }
+                                    let tx = transaction.clone();
+                                    let result = script_execution(
+                                        tx.vin[input_index].prevout.scriptpubkey_asm.clone(),
+                                        scriptsig_asm,
+                                        tx,
+                                        input_index,
+                                    );
+                                    if result == false {
+                                        tx_result = false;
+                                        break;
                                     }
+                                }
 
-                                    if tx_result == true {
-                                        s_count += 1;
-                                    } else {
-                                        f_count += 1;
-                                    }
-
-                                    // println!("\n\n");
+                                if tx_result == true {
+                                    s_count += 1;
+                                } else {
+                                    f_count += 1;
                                 }
                             }
-                            Err(e) => {
-                                println!("Failed to parse JSON: {}", e);
-                            }
                         }
-                    }
+                        Err(e) => {
+                            println!("Failed to parse JSON: {}", e);
+                        }
+                    },
                     Err(e) => eprintln!("Failed to read file: {}", e),
                 }
             }
@@ -268,10 +250,8 @@ mod test {
         let path =
             "./mempool/01f16e8312f9c882e869d31a3ab386b94a38f6091f7e947c6f2ed2b3389f4406.json";
 
-        // Read the JSON file
         let data = fs::read_to_string(path).expect("Unable to read file");
 
-        // Deserialize JSON into Rust data structures
         let transaction: Transaction = serde_json::from_str(&data)?;
 
         let scriptsig_asm = transaction.clone().vin[0]
@@ -292,4 +272,3 @@ mod test {
         Ok(())
     }
 }
-

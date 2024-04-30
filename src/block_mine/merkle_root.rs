@@ -4,7 +4,6 @@ use crate::transaction::Transaction;
 
 use super::serialise_tx::double_sha256;
 
-// RETURNS THE MERKEL ROOT, COINBASE TX, COINBASE TXID AND TXIDS TO BE INCLUDED IN THE BLOCK
 pub fn generate_roots(
     map: Vec<(String, Transaction, String, usize, u64)>,
 ) -> Result<(String, String, String, Vec<String>)> {
@@ -43,7 +42,6 @@ pub fn generate_roots(
     Ok((merkel_root, coinbase_tx, coinbase_txid, txids))
 }
 
-// FUNCTION TO CREATE THE MERKEL ROOT FOR A VECTOR OF TXIDS
 fn merkel_root(txids: Vec<String>) -> Result<String> {
     let mut txids_natural: Vec<String> = Vec::new();
 
@@ -57,7 +55,6 @@ fn merkel_root(txids: Vec<String>) -> Result<String> {
     while txids_natural.len() > 1 {
         let mut next_level = Vec::new();
 
-        // IF ODD NUMBER OF TXID, DUPLICATE THE LAST ONE 
         if txids_natural.len() % 2 != 0 {
             txids_natural.push(txids_natural.last().unwrap().clone());
         }
@@ -68,7 +65,7 @@ fn merkel_root(txids: Vec<String>) -> Result<String> {
                     let concat = one.to_owned() + two;
                     next_level.push(hex::encode(double_sha256(&hex::decode(&concat)?)));
                 }
-                _ => unreachable!(), // This case should never happen due to the duplication logic above
+                _ => unreachable!(),
             }
         }
 
@@ -78,7 +75,6 @@ fn merkel_root(txids: Vec<String>) -> Result<String> {
     Ok(txids_natural[0].clone())
 }
 
-// CREATE THE COINBASE TX AND COINBASE TXID
 pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<(String, String)> {
     let mut coinbase_tx = String::new();
     let mut txid_coinbase_tx = String::new();
@@ -93,17 +89,14 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
 
     let wtxid_commitment = format!("{}{}", "6a24aa21a9ed", wtxid_commit);
 
-    // VERSION MARKER FLAG
     coinbase_tx.push_str("01000000");
     txid_coinbase_tx.push_str("01000000");
 
     coinbase_tx.push_str("0001");
 
-    // INPUT COUNT
     coinbase_tx.push_str("01");
     txid_coinbase_tx.push_str("01");
 
-    // INPUT
     coinbase_tx.push_str("0000000000000000000000000000000000000000000000000000000000000000");
     coinbase_tx.push_str("ffffffff");
     coinbase_tx.push_str("25");
@@ -111,10 +104,8 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
         .push_str("03a0bb0d184d696e656420627920416e74506f6f6c373946205b8160a4256c0000946e0100");
     coinbase_tx.push_str("ffffffff");
 
-    // OUTPUT COUNT
     coinbase_tx.push_str("02");
 
-    // OUTPUT
     coinbase_tx.push_str(&hex::encode(block_amount.to_le_bytes()));
     coinbase_tx.push_str("19");
     coinbase_tx.push_str("76a914edf10a7fac6b32e24daa5305c723f3de58db1bc888ac");
@@ -123,9 +114,6 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
     coinbase_tx.push_str("26");
     coinbase_tx.push_str(&wtxid_commitment);
 
-    // ------------------TXID--------------------------
-
-    // INPUT
     txid_coinbase_tx.push_str("0000000000000000000000000000000000000000000000000000000000000000");
     txid_coinbase_tx.push_str("ffffffff");
     txid_coinbase_tx.push_str("25");
@@ -133,10 +121,8 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
         .push_str("03a0bb0d184d696e656420627920416e74506f6f6c373946205b8160a4256c0000946e0100");
     txid_coinbase_tx.push_str("ffffffff");
 
-    // OUTPUT COUNT
     txid_coinbase_tx.push_str("02");
 
-    // OUTPUT
     txid_coinbase_tx.push_str(&hex::encode(block_amount.to_le_bytes()));
     txid_coinbase_tx.push_str("19");
     txid_coinbase_tx.push_str("76a914edf10a7fac6b32e24daa5305c723f3de58db1bc888ac");
@@ -145,9 +131,6 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
     txid_coinbase_tx.push_str("26");
     txid_coinbase_tx.push_str(&wtxid_commitment);
 
-    // -----------------TXID----------------------------
-
-    // WITNESS
     coinbase_tx.push_str("01");
     coinbase_tx.push_str("20");
     coinbase_tx.push_str("0000000000000000000000000000000000000000000000000000000000000000");
@@ -155,12 +138,9 @@ pub fn create_coinbase(witness_root_hash: String, block_subsidy: u64) -> Result<
     coinbase_tx.push_str("00000000");
     txid_coinbase_tx.push_str("00000000");
 
-    // println!("{}", wtxid_commitment);
-
     Ok((coinbase_tx, txid_coinbase_tx))
 }
 
-// TO TEST MY CODE DURING DEVELOPMENT
 #[cfg(test)]
 
 mod test {

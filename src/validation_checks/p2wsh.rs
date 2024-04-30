@@ -33,13 +33,9 @@ fn script_execution_p2wsh(
 
     let mut stack: Vec<Vec<u8>> = Vec::new();
 
-    // PUSH SIGNATURES
-
     for index in 0..witness.len() - 1 {
         stack.push(hex::decode(&witness[index])?);
     }
-
-    // EXECUTING WITNESS SCRIPT
 
     let witness_script_bytes = hex::decode(&witness.last().cloned().expect("SCRIPT MISSING"))?;
 
@@ -54,12 +50,8 @@ fn script_execution_p2wsh(
     let witnness_script_hash = single_sha256(&witness_script_bytes);
 
     if witnness_script_hash != witness_program_bytes {
-        // println!("SCRIPTPUBKEY: FAILED");
-
         return Ok(false);
     }
-
-    // println!("SCRIPTPUBKEY: SUCCESSFULL");
 
     let mut index = 0;
 
@@ -73,7 +65,6 @@ fn script_execution_p2wsh(
             }
 
             _ if opcode <= 75 as u8 && opcode >= 1 as u8 => {
-                // OP_PUSHBYTES_33
                 if index + opcode as usize <= witness_script_bytes.len() {
                     let bytes = witness_script_bytes[index..index + opcode as usize].to_vec();
                     stack.push(bytes);
@@ -82,7 +73,6 @@ fn script_execution_p2wsh(
             }
 
             174 => {
-                // OP_CHECKMULTISIG
                 let result_multisig =
                     op_checkmultisig(&mut stack, tx.clone(), tx_input_index, input_type)?;
 
@@ -95,7 +85,6 @@ fn script_execution_p2wsh(
             }
 
             173 => {
-                // OP_CHECKSIGVERIFY
                 let result_singlesig =
                     op_checksig(&mut stack, tx.clone(), tx_input_index, input_type)?;
 
@@ -104,8 +93,6 @@ fn script_execution_p2wsh(
                 } else {
                     stack.push(vec![0u8]);
                 }
-
-                // OP_VERIFY
 
                 let top = stack.pop().unwrap();
                 if top == vec![1u8] {
@@ -117,8 +104,6 @@ fn script_execution_p2wsh(
             }
 
             172 => {
-                // OP_CHECKSIG
-
                 let sig_length = stack[stack.len() - 2].len();
 
                 if sig_length <= 75 && sig_length >= 70 {
@@ -136,13 +121,11 @@ fn script_execution_p2wsh(
             }
 
             169 => {
-                // OP_HASH160
                 let top = stack.pop().unwrap_or(vec![254u8]);
                 stack.push(hash160(&top));
             }
 
             135 => {
-                // OP_EQUAL
                 let a = stack.pop().unwrap_or(vec![254u8]);
                 let b = stack.pop().unwrap_or(vec![254u8]);
 
@@ -154,7 +137,6 @@ fn script_execution_p2wsh(
             }
 
             99 => {
-                // OP_NOTIF
                 let top_stack_value = stack.pop().unwrap_or(vec![254u8]);
                 let mut path = "else";
                 let mut else_appeared = 0;
@@ -168,7 +150,6 @@ fn script_execution_p2wsh(
 
                     match opcode {
                         117 => {
-                            //  OP_DROP
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -177,18 +158,15 @@ fn script_execution_p2wsh(
                         }
 
                         118 => {
-                            // OP_DUP
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
                                 let top = stack.last().cloned().unwrap_or(vec![254u8]);
                                 stack.push(top);
                             }
-                            // println!("{:?}", stack);
                         }
 
                         169 => {
-                            //OP_HASH160
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -198,8 +176,6 @@ fn script_execution_p2wsh(
                         }
 
                         _ if opcode <= 75 as u8 && opcode >= 1 as u8 => {
-                            // OP_PUSHBYTES_33
-
                             if index + opcode as usize <= witness_script_bytes.len() {
                                 let bytes =
                                     witness_script_bytes[index..index + opcode as usize].to_vec();
@@ -211,11 +187,9 @@ fn script_execution_p2wsh(
                                 }
                                 index += opcode as usize;
                             }
-                            // println!("{:?}", stack);
                         }
 
                         136 => {
-                            // OP_EQUALVERIFY
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -227,8 +201,6 @@ fn script_execution_p2wsh(
                                 } else {
                                     stack.push(vec![0u8]);
                                 }
-
-                                // OP_VERIFY
 
                                 let top_verify = stack.pop().unwrap();
                                 if top_verify != vec![1u8] {
@@ -264,12 +236,10 @@ fn script_execution_p2wsh(
                         }
 
                         103 => {
-                            // OP_ELSE
                             else_appeared = 1;
                         }
 
                         173 => {
-                            // OP_CHECKSIGVERIFY
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -286,8 +256,6 @@ fn script_execution_p2wsh(
                                     stack.push(vec![0u8]);
                                 }
 
-                                // OP_VERIFY
-
                                 let top = stack.pop().unwrap();
                                 if top == vec![1u8] {
                                     script_result = true;
@@ -299,8 +267,6 @@ fn script_execution_p2wsh(
                         }
 
                         172 => {
-                            // OP_CHECKSIG
-
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -326,7 +292,6 @@ fn script_execution_p2wsh(
                         }
 
                         130 => {
-                            // OP_SIZE
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -337,7 +302,6 @@ fn script_execution_p2wsh(
                         }
 
                         104 => {
-                            // println!("OP_IF: SUCCESSFULL");
                             break;
                         }
 
@@ -347,7 +311,6 @@ fn script_execution_p2wsh(
             }
 
             100 => {
-                // OP_NOTIF
                 let top_stack_value = stack.pop().unwrap_or(vec![254u8]);
                 let mut path = "else";
                 let mut else_appeared = 0;
@@ -361,7 +324,6 @@ fn script_execution_p2wsh(
 
                     match opcode {
                         117 => {
-                            //  OP_DROP
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -370,18 +332,15 @@ fn script_execution_p2wsh(
                         }
 
                         118 => {
-                            // OP_DUP
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
                                 let top = stack.last().cloned().unwrap_or(vec![254u8]);
                                 stack.push(top);
                             }
-                            // println!("{:?}", stack);
                         }
 
                         169 => {
-                            //OP_HASH160
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -391,8 +350,6 @@ fn script_execution_p2wsh(
                         }
 
                         _ if opcode <= 75 as u8 && opcode >= 1 as u8 => {
-                            // OP_PUSHBYTES_33
-
                             if index + opcode as usize <= witness_script_bytes.len() {
                                 let bytes =
                                     witness_script_bytes[index..index + opcode as usize].to_vec();
@@ -407,7 +364,6 @@ fn script_execution_p2wsh(
                         }
 
                         136 => {
-                            // OP_EQUALVERIFY
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -419,8 +375,6 @@ fn script_execution_p2wsh(
                                 } else {
                                     stack.push(vec![0u8]);
                                 }
-
-                                // OP_VERIFY
 
                                 let top_verify = stack.pop().unwrap();
                                 if top_verify != vec![1u8] {
@@ -456,12 +410,10 @@ fn script_execution_p2wsh(
                         }
 
                         103 => {
-                            // OP_ELSE
                             else_appeared = 1;
                         }
 
                         173 => {
-                            // OP_CHECKSIGVERIFY
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -478,8 +430,6 @@ fn script_execution_p2wsh(
                                     stack.push(vec![0u8]);
                                 }
 
-                                // OP_VERIFY
-
                                 let top = stack.pop().unwrap();
                                 if top == vec![1u8] {
                                     script_result = true;
@@ -491,8 +441,6 @@ fn script_execution_p2wsh(
                         }
 
                         172 => {
-                            // OP_CHECKSIG
-
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -518,7 +466,6 @@ fn script_execution_p2wsh(
                         }
 
                         130 => {
-                            // OP_SIZE
                             if (path == "if" && else_appeared == 0)
                                 || (path == "else" && else_appeared == 1)
                             {
@@ -544,7 +491,6 @@ fn script_execution_p2wsh(
     Ok(script_result)
 }
 
-// TO TEST MY CODE DURING DEVELOPMENT
 #[cfg(test)]
 mod test {
     use std::fs;
@@ -562,33 +508,27 @@ mod test {
             let path = entry.path();
             if path.is_file() {
                 match fs::read_to_string(path) {
-                    Ok(contents) => {
-                        match serde_json::from_str::<Transaction>(&contents) {
-                            Ok(transaction) => {
-                                // Check if all inputs' prevout scriptpubkey_type are .p2sh
-                                let all_p2sh = transaction.vin.iter().all(|input| {
-                                    input.prevout.scriptpubkey_type == "v0_p2wsh".to_string()
-                                });
-                                if all_p2sh {
-                                    let result = script_execution_p2wsh(
-                                        transaction.vin[0].witness.clone().unwrap(),
-                                        transaction,
-                                        0,
-                                    )?;
+                    Ok(contents) => match serde_json::from_str::<Transaction>(&contents) {
+                        Ok(transaction) => {
+                            let all_p2sh = transaction.vin.iter().all(|input| {
+                                input.prevout.scriptpubkey_type == "v0_p2wsh".to_string()
+                            });
+                            if all_p2sh {
+                                let result = script_execution_p2wsh(
+                                    transaction.vin[0].witness.clone().unwrap(),
+                                    transaction,
+                                    0,
+                                )?;
 
-                                    if result == true {
-                                        s_count += 1;
-                                    } else {
-                                        f_count += 1;
-                                    }
-
-                                    // println!("\n\n");
+                                if result == true {
+                                    s_count += 1;
+                                } else {
+                                    f_count += 1;
                                 }
                             }
-                            Err(_) => {
-                            }
                         }
-                    }
+                        Err(_) => {}
+                    },
                     Err(_) => {}
                 }
             }
@@ -605,10 +545,8 @@ mod test {
         let path =
             "./mempool/0bec1aee6decd078b98553691be92f99ad12271241c6b6f7cf00433954d3f166.json";
 
-        // Read the JSON file
         let data = fs::read_to_string(path).expect("Unable to read file");
 
-        // Deserialize JSON into Rust data structures
         let transaction: Transaction = serde_json::from_str(&data)?;
 
         let tx = transaction.clone();
@@ -619,4 +557,3 @@ mod test {
         Ok(())
     }
 }
-

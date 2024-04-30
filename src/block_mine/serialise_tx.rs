@@ -1,5 +1,5 @@
-use std::fs;
 use sha2::{Digest, Sha256};
+use std::fs;
 use walkdir::WalkDir;
 
 use crate::{error::Result, transaction::Transaction};
@@ -8,9 +8,7 @@ pub fn double_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(&Sha256::digest(data)).to_vec()
 }
 
-// ITERATE THROUGH THE VALID-MEMPOOL TO CREATE A VECTOR OF FEATURES TO BE USED FOR EACH TRANSACTION IN BLOCK MINING
 pub fn create_txid_tx_map() -> Result<Vec<(String, Transaction, String, usize, u64)>> {
-
     let v_mempool_dir = "./valid-mempool";
     let mut map: Vec<(String, Transaction, String, usize, u64)> = Vec::new();
 
@@ -36,7 +34,6 @@ pub fn create_txid_tx_map() -> Result<Vec<(String, Transaction, String, usize, u
                             let txid = hex::encode(txid);
                             let wtxid = hex::encode(wtxid);
 
-                            // Find the correct position to insert the transaction based on its fees
                             let position = map
                                 .iter()
                                 .position(|(_, _, _, net_weight, gas_fees)| {
@@ -56,7 +53,6 @@ pub fn create_txid_tx_map() -> Result<Vec<(String, Transaction, String, usize, u
     Ok(map)
 }
 
-// AIMS TO CREATE THE RAW TX FOR TXID AND RAW WTX FOR WTXID 
 fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)> {
     let tx_type;
     if tx.vin[0].witness == None {
@@ -69,7 +65,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
     let mut non_witness_bytes = 0;
     let mut witness_bytes = 0;
 
-    // CALCULATE GAS FEES
     for input in tx.vin.iter() {
         fees += input.prevout.value;
     }
@@ -82,11 +77,9 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
     let mut raw_wtx: Vec<u8> = Vec::new();
 
     if tx_type == "LEGACY" {
-        // VERSION
         raw_tx.extend(tx.version.to_le_bytes());
         non_witness_bytes += 4;
 
-        // INPUT COUNT
         if tx.vin.len() >= 50 {
             return Ok((false, Vec::new(), Vec::new(), 0, 0));
         }
@@ -94,12 +87,10 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
         raw_tx.push(tx.vin.len().try_into()?);
         non_witness_bytes += 1;
 
-        // INPUTS
         for input in tx.vin.iter() {
-            // TXID REVERSED
             let mut txid = hex::decode(&input.txid.clone())?;
             txid.reverse();
-            // SCRIPT SIG
+
             let script_sig = hex::decode(&input.scriptsig.clone().unwrap())?;
             let script_sig_len = script_sig.len();
 
@@ -112,8 +103,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
             non_witness_bytes += 32 + 4 + 1 + script_sig_len + 4;
         }
 
-        // OUTPUT COUNT
-
         if tx.vout.len() >= 200 {
             return Ok((false, Vec::new(), Vec::new(), 0, 0));
         }
@@ -122,9 +111,7 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
 
         non_witness_bytes += 1;
 
-        // OUTPUTS
         for output in tx.vout.iter() {
-            // SCRIPT PUB KEY
             let scriptpubkey = hex::decode(&output.scriptpubkey.clone())?;
             let scriptpubkey_len = scriptpubkey.len();
 
@@ -135,19 +122,16 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
             non_witness_bytes += 8 + 1 + scriptpubkey_len;
         }
 
-        // LOCKTIME
         raw_tx.extend(tx.locktime.to_le_bytes());
         non_witness_bytes += 4;
 
         raw_wtx = raw_tx.clone();
     } else {
-        // VERSION
         raw_tx.extend(tx.version.to_le_bytes());
         raw_wtx.extend(tx.version.to_le_bytes());
 
         non_witness_bytes += 4;
 
-        // MARKER FLAG IN WTX ONLY
         let marker = 00;
         let flag = 01;
         raw_wtx.push(marker.try_into()?);
@@ -155,7 +139,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
 
         witness_bytes += 1 + 1;
 
-        // INPUT COUNT
         if tx.vin.len() >= 200 {
             return Ok((false, Vec::new(), Vec::new(), 0, 0));
         }
@@ -164,13 +147,10 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
 
         non_witness_bytes += 1;
 
-        // INPUTS
         for input in tx.vin.iter() {
-            // TXID REVERSED
             let mut txid = hex::decode(&input.txid.clone())?;
             txid.reverse();
 
-            // SCRIPT SIG
             let script_sig = hex::decode(&input.scriptsig.clone().unwrap())?;
             let script_sig_len = script_sig.len();
 
@@ -203,7 +183,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
             non_witness_bytes += 4;
         }
 
-        // OUTPUT COUNT
         if tx.vout.len() >= 255 {
             return Ok((false, Vec::new(), Vec::new(), 0, 0));
         }
@@ -212,9 +191,7 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
 
         non_witness_bytes += 1;
 
-        // OUTPUTS
         for output in tx.vout.iter() {
-            // SCRIPT PUB KEY
             let scriptpubkey = hex::decode(&output.scriptpubkey.clone())?;
             let scriptpubkey_len = scriptpubkey.len();
 
@@ -234,10 +211,8 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
             non_witness_bytes += 1 + scriptpubkey_len;
         }
 
-        // WITNESS ONLY IN WTX
         for input in tx.vin.iter() {
             let witness = input.witness.clone().unwrap();
-            // let witness_len = witness.len();
 
             raw_wtx.push(witness.len().try_into()?);
 
@@ -253,7 +228,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
             }
         }
 
-        // LOCKTIME
         raw_tx.extend(tx.locktime.to_le_bytes());
         raw_wtx.extend(tx.locktime.to_le_bytes());
 
@@ -265,7 +239,6 @@ fn serialise_tx(tx: &Transaction) -> Result<(bool, Vec<u8>, Vec<u8>, usize, u64)
     Ok((true, raw_tx, raw_wtx, tx_weight, fees))
 }
 
-// TO TEST MY CODE DURING DEVELOPMENT
 #[cfg(test)]
 mod test {
     use std::fs;
@@ -287,5 +260,4 @@ mod test {
 
         Ok(())
     }
-
 }
